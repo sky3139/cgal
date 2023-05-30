@@ -5,6 +5,7 @@
 #include <CGAL/property_map.h>
 #include <iostream>
 #include <fstream>
+#include <CGAL/basic.h>
 
 #include <boost/filesystem.hpp>
 typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
@@ -12,6 +13,20 @@ typedef CGAL::Polyhedron_3<Kernel> Polyhedron;
 typedef boost::graph_traits<Polyhedron>::face_descriptor face_descriptor;
 typedef Polyhedron::Vertex_iterator Vertex_iterator;
 using namespace std;
+
+struct maps
+{
+    float x, y, z;
+    float sdf;
+    int sdf_cnt;
+    maps()
+    {
+        sdf_cnt = 0;
+        sdf = 0.0;
+    }
+};
+typedef Kernel::Point_3 Point;
+
 int gen_obj_sdf(string input_name = "../data/Armadillo.off", string out = "out")
 {
 
@@ -39,31 +54,63 @@ int gen_obj_sdf(string input_name = "../data/Armadillo.off", string out = "out")
     //           << " maximum SDF: " << min_max_sdf.second << std::endl;
     //  打印SDF值
     std::fstream fs(out + string(".obj"), std::ios::out);
-    std::fstream fsdf(out + string("_sdf.txt"), std::ios::out);
-
     // Write polyhedron in Object File Format (OFF).
     CGAL::set_ascii_mode(fs);
+    std::vector<maps> mapss;
     for (Vertex_iterator v = mesh.vertices_begin(); v != mesh.vertices_end(); ++v)
-        fs << "v " << v->point() << std::endl;
-    int idx = 0;
-    for (Polyhedron::Facet_iterator i = mesh.facets_begin(); i != mesh.facets_end(); ++i)
     {
-        Polyhedron::Halfedge_around_facet_circulator j = i->facet_begin();
+        // allpts.push_back(v->point());
+        auto p = v->point();
+        // fs << "v " << v->point() << std::endl;
+        maps m;
+        m.x = p.x();
+        m.y = p.y();
+        m.z = p.z();
+        mapss.push_back(m);
+        // fs << "v " <<p.x()<< std::endl;
+    }
+    int idx = 0;
+
+    for (Polyhedron::Facet_iterator fi = mesh.facets_begin(); fi != mesh.facets_end(); ++fi)
+    {
+        Polyhedron::Halfedge_around_facet_circulator j = fi->facet_begin();
         // Facets in polyhedral surfaces are at least triangles.
-        fsdf << sdf_property_map[i] << std::endl;
         CGAL_assertion(CGAL::circulator_size(j) >= 3);
-        fs << "f" << ' ';
+        // fs << sdf_property_map[fi] << ' ';
         do
         {
-            fs << distance(mesh.vertices_begin(), j->vertex()) + 1 << " ";
-        } while (++j != i->facet_begin());
-        fs << std::endl;
+            auto idx = distance(mesh.vertices_begin(), j->vertex()) + 1;
+            mapss[idx].sdf_cnt++;
+            mapss[idx].sdf += sdf_property_map[fi];
+            // fs << mapss[idx] << " ";
+        } while (++j != fi->facet_begin());
         idx++;
+
+        // for (int i = 0; i < 3; i++)
+        // {
+        //     Point p = fi->point();
+        //     std::cout << "(" << p.x() << "," << p.y() << ")";
+        // }
+        // std::cout << std::endl;
+        // const typename Tr::Cell_handle cell = i->first;
+        // const int &index = i->second;
+        // if (cell->is_facet_on_surface(index) == true)
+        // {
+        //     const int index1 = V[cell->vertex(tr.vertex_triple_index(index, 0))];
+        //     const int index2 = V[cell->vertex(tr.vertex_triple_index(index, 1))];
+        //     const int index3 = V[cell->vertex(tr.vertex_triple_index(index, 2))];
+        // }
     }
-    // for (face_descriptor f : faces(mesh))
+
+    std::cout << mapss.size() << std::endl;
+    for (auto &it : mapss)
+    {
+        if (it.sdf_cnt == 0)
+            continue;
+        fs << it.x << " " << it.y << " " << it.z << " " << it.sdf / it.sdf_cnt << std::endl;
+    }
     //     fs << " " << sdf_property_map[f] << " ";
     fs.close();
-    fsdf.close();
     std::cout << std::endl;
     return EXIT_SUCCESS;
 }
