@@ -53,7 +53,7 @@ int gen_obj_sdf(string input_name = "../data/Armadillo.off", string out = "out")
     // std::cout << "minimum SDF: " << min_max_sdf.first
     //           << " maximum SDF: " << min_max_sdf.second << std::endl;
     //  打印SDF值
-    std::fstream fs(out + string(".obj"), std::ios::out);
+    std::fstream fs(out + string(".txt"), std::ios::out);
     // Write polyhedron in Object File Format (OFF).
     CGAL::set_ascii_mode(fs);
     std::vector<maps> mapss;
